@@ -1,8 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using MongoDB.Book.Models;
+﻿using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 
 namespace MongoDB.Book.Controllers
 {
@@ -10,35 +7,66 @@ namespace MongoDB.Book.Controllers
     [ApiController]
     public class BookController : ControllerBase
     {
-        private readonly BookContext _bookContext;
-        public BookController(BookContext bookContext)
+        private readonly BookService _bookService;
+
+        public BookController(BookService bookService)
         {
-            _bookContext = bookContext;
+            _bookService = bookService;
         }
 
         [HttpGet("books")]
-        public async Task<ActionResult<IEnumerable<Models.Book>>> Gets()
+        public ActionResult<List<Models.Book>> Get() =>
+            _bookService.Gets();
+
+        [HttpGet("books/{id:length(24)}", Name = "GetBook")]
+        public ActionResult<Models.Book> Get(string id)
         {
-            return await _bookContext.Books.ToListAsync();
-        }
-        [HttpGet("books/{id:int}")]
-        public async Task<ActionResult<Models.Book>> Get(int id)
-        {
-            var todoItem = await _bookContext.Books.FindAsync(id);
-            if (todoItem == null)
+            var book = _bookService.Get(id);
+
+            if (book == null)
             {
                 return NotFound();
             }
-            return todoItem;
+
+            return book;
         }
 
         [HttpPost("books")]
-        public async Task<ActionResult<Models.Book>> Post(Models.Book book)
+        public ActionResult<Models.Book> Create(Models.Book book)
         {
-            _bookContext.Books.Add(book);
-            await _bookContext.SaveChangesAsync();
-            return CreatedAtAction(nameof(Get), new { id = book.Id }, book);
+            _bookService.Insert(book);
+
+            return CreatedAtRoute("GetBook", new { id = book.Id.ToString() }, book);
         }
 
+        [HttpPut("books/{id:length(24)}")]
+        public IActionResult Update(string id, Models.Book bookIn)
+        {
+            var book = _bookService.Get(id);
+
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            _bookService.Update(id, bookIn);
+
+            return NoContent();
+        }
+
+        [HttpDelete("books/{id:length(24)}")]
+        public IActionResult Delete(string id)
+        {
+            var book = _bookService.Get(id);
+
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            _bookService.Delete(book.Id);
+
+            return NoContent();
+        }
     }
 }
